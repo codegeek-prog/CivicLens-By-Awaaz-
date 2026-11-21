@@ -1,0 +1,41 @@
+{
+  "name": "CivicLens",
+  "short_name": "CivicLens",
+  "tagline": "powered by Awaaz",
+  "description": "Civic complaint web app for city residents, designed for mobile accessibility across Indian regional languages.",
+  "version": "1.0.0",
+  "permissions": [
+    {
+      "name": "microphone",
+      "feature": "SpeechRecognition",
+      "purpose": "Turn spoken complaints into written text in the resident's chosen language (English, हिन्दी, తెలుగు, தமிழ், বাংলা, मराठी)."
+    },
+    {
+      "name": "camera",
+      "feature": "MediaCapture",
+      "purpose": "Capture or attach photographs of road potholes, garbage heaps, water leaks, or broken streetlights directly from the phone."
+    },
+    {
+      "name": "geolocation",
+      "feature": "GeolocationAPI",
+      "purpose": "Accurately detect the resident's current coordinates and municipal ward for on-site problem resolution."
+    }
+  ],
+  "device_features": {
+    "microphone": {
+      "required": false,
+      "fallback": "Manual text input with Indian script keyboard support"
+    },
+    "camera": {
+      "required": false,
+      "fallback": "File upload picker or photo-less submission"
+    },
+    "location": {
+      "required": false,
+      "fallback": "Manual landmark and street address entry"
+    }
+  },
+  "display": "standalone",
+  "background_color": "#FBF7F6",
+  "theme_color": "#2B3F36"
+}

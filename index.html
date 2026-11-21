@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CivicLens</title>
+
+  <!-- Google Fonts: Noto Serif for calm quiet headings, Noto Sans + Indic scripts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500;600&family=Noto+Sans+Telugu:wght@400;500;600&family=Noto+Sans:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase App & Firestore SDKs (Compat for direct browser execution) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <main class="app-container">
+
+    <!-- ================= VIEW 1: LANGUAGE SELECTION ================= -->
+    <section id="view-language" class="app-view active" aria-label="Language Selection">
+      <header class="header">
+        <h1 class="brand-title">CivicLens</h1>
+        <p class="brand-tagline" data-i18n="tagline">powered by Awaaz</p>
+      </header>
+
+      <!-- One-line "How it works" Banner -->
+      <div class="how-it-works-banner" role="region" aria-label="How it works">
+        <div class="how-it-works-content">
+          <svg class="how-it-works-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <p id="how-it-works-text" class="how-it-works-text" data-i18n="howItWorksText">
+            How it works: Select language, speak or snap your problem, and track civic repair in real time.
+          </p>
+        </div>
+        <button type="button" class="speaker-btn speaker-btn-sm" data-tts="howItWorksText" aria-label="Read how it works aloud" title="Listen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="language-selection">
+        <div class="language-list">
+          <button type="button" class="lang-button font-en" data-lang="en">English</button>
+          <button type="button" class="lang-button font-hi" data-lang="hi">हिन्दी</button>
+          <button type="button" class="lang-button font-te" data-lang="te">తెలుగు</button>
+          <button type="button" class="lang-button font-ta" data-lang="ta">தமிழ்</button>
+          <button type="button" class="lang-button font-bn" data-lang="bn">বাংলা</button>
+          <button type="button" class="lang-button font-mr" data-lang="mr">मराठी</button>
+        </div>
+
+        <div id="language-chosen-panel" class="language-chosen-panel hidden">
+          <div class="message-row">
+            <p id="welcome-message-text" class="message-text" data-i18n="welcomeText">
+              Report city issues directly to your municipal corporation. We will help track resolution.
+            </p>
+            <button type="button" class="speaker-btn" data-tts="welcomeText" aria-label="Read message aloud" title="Listen">
+              <svg class="speaker-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            </button>
+          </div>
+
+          <button type="button" id="btn-continue" class="btn-main-accent" data-i18n="continueBtn">
+            Continue
+          </button>
+
+          <div style="margin-top: 14px; text-align: center; display: flex; justify-content: center; gap: 8px;">
+            <button type="button" id="btn-track-nav-lang" class="btn-subtle-nav">
+              <span data-i18n="trackNavBtn">Track</span>
+            </button>
+            <button type="button" id="btn-officer-nav-welcome" class="btn-subtle-nav">
+              Officer Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: REPORT A PROBLEM ================= -->
+    <section id="view-report" class="app-view" aria-label="Report a Problem">
+      <!-- App Header -->
+      <header class="view-header">
+        <div>
+          <h2 class="brand-title-compact">CivicLens</h2>
+          <p class="brand-tagline-compact" data-i18n="tagline">powered by Awaaz</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btn-track-nav-report" class="btn-subtle-nav" aria-label="Track complaint">
+            <span data-i18n="trackNavBtn">Track</span>
+          </button>
+          <button type="button" id="btn-view-tickets-header" class="btn-subtle-nav" aria-label="View saved tickets">
+            <span data-i18n="myTicketsBtn">My Tickets</span>
+          </button>
+          <button type="button" id="btn-officer-nav-report" class="btn-subtle-nav" aria-label="Officer Dashboard">
+            Officer
+          </button>
+          <button type="button" id="btn-switch-lang" class="btn-lang-pill" aria-label="Change language">
+            <span id="current-lang-pill-label">English</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Friendly Notice for Blocked Permissions or Guidance -->
+      <div id="friendly-alert" class="friendly-notice hidden" role="alert">
+        <p id="friendly-alert-text" class="friendly-notice-text"></p>
+        <button type="button" id="btn-speech-alert" class="speaker-btn speaker-btn-sm" aria-label="Listen to notice" title="Listen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Screen Title with Speaker Button -->
+      <div class="screen-title-row">
+        <h3 class="screen-title" data-i18n="reportScreenTitle">Report a problem</h3>
+        <button type="button" class="speaker-btn" data-tts="reportScreenTitle" aria-label="Read title aloud" title="Listen">
+          <svg class="speaker-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Six Large Icon Tiles -->
+      <div class="tiles-grid" role="radiogroup" aria-label="Problem Category">
+        <!-- 1. Road -->
+        <button type="button" class="icon-tile" data-problem="roads" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19L8 5"></path>
+              <path d="M20 19L16 5"></path>
+              <path d="M12 7v2"></path>
+              <path d="M12 13v2"></path>
+              <path d="M12 19v1"></path>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileRoad">Roads</span>
+        </button>
+
+        <!-- 2. Waste -->
+        <button type="button" class="icon-tile" data-problem="waste" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileGarbage">Waste</span>
+        </button>
+
+        <!-- 3. Water -->
+        <button type="button" class="icon-tile" data-problem="water" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileWater">Water</span>
+        </button>
+
+        <!-- 4. Electricity -->
+        <button type="button" class="icon-tile" data-problem="electricity" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileElectricity">Electricity</span>
+        </button>
+
+        <!-- 5. Trees -->
+        <button type="button" class="icon-tile" data-problem="trees" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19v3"></path>
+              <path d="M12 19a7 7 0 0 1-7-7c0-2.5 1.5-4.5 3.5-5.5a6 6 0 0 1 11 0c2 1 3.5 3 3.5 5.5a7 7 0 0 1-7 7z"></path>
+              <path d="M12 13v6"></path>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileTree">Trees</span>
+        </button>
+
+        <!-- 6. Drainage -->
+        <button type="button" class="icon-tile" data-problem="drainage" role="radio" aria-checked="false">
+          <div class="tile-icon-wrap">
+            <svg class="tile-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+              <line x1="8" y1="5" x2="8" y2="19"></line>
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="16" y1="5" x2="16" y2="19"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+            </svg>
+          </div>
+          <span class="tile-label" data-i18n="tileDrain">Drainage</span>
+        </button>
+      </div>
+
+      <!-- Controls Below Tiles -->
+      <div class="controls-section">
+        <!-- Text Box & Microphone Button -->
+        <div class="input-block">
+          <div class="text-and-mic-row">
+            <input type="text" id="problem-text-input" class="problem-text-input" placeholder="Write problem here or tap microphone..." data-i18n-placeholder="textPlaceholder">
+            <button type="button" id="btn-microphone" class="btn-microphone" aria-label="Record voice note" title="Microphone">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <p id="mic-status-label" class="subtle-status hidden"></p>
+        </div>
+
+        <!-- Photo Button & Hidden File Input -->
+        <div class="photo-block">
+          <input type="file" id="photo-file-input" accept="image/*" capture="environment" class="hidden" style="display: none;">
+          <button type="button" id="btn-photo" class="action-btn">
+            <svg class="action-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <span id="photo-btn-label" data-i18n="photoBtn">Photo</span>
+          </button>
+
+          <!-- Photo Preview Container -->
+          <div id="photo-preview-wrap" class="photo-preview-wrap hidden">
+            <img id="photo-preview-img" class="photo-preview-img" alt="Captured problem preview">
+            <button type="button" id="btn-remove-photo" class="btn-remove-photo" data-i18n="removePhoto">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <!-- Location Button & Landmark Input -->
+        <div class="location-block">
+          <button type="button" id="btn-location" class="action-btn">
+            <svg class="action-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span id="location-btn-label" data-i18n="locationBtn">Use my location</span>
+          </button>
+
+          <input type="text" id="landmark-input" class="landmark-text-input" placeholder="Or type a landmark (e.g. Near City Hospital)..." data-i18n-placeholder="landmarkPlaceholder">
+        </div>
+
+        <!-- One Terracotta Send Button -->
+        <div class="send-wrapper">
+          <button type="button" id="btn-send-report" class="btn-main-accent">
+            <span class="btn-spinner hidden" id="send-spinner" aria-hidden="true"></span>
+            <span id="send-btn-label" data-i18n="sendBtn">Send</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: SHORT CONFIRMATION (CITIZEN'S LANGUAGE) ================= -->
+    <section id="view-success" class="app-view" aria-label="Ticket Confirmation">
+      <header class="header">
+        <h1 class="brand-title">CivicLens</h1>
+        <p class="brand-tagline" data-i18n="tagline">powered by Awaaz</p>
+      </header>
+
+      <div class="confirmation-container">
+
+        <!-- Short Localized Confirmation Card -->
+        <div class="confirmation-card">
+          <!-- Card Header with Read-Aloud Button -->
+          <div class="confirmation-card-header">
+            <div>
+              <h2 class="confirmation-heading" data-i18n="confirmationTitle">Ticket Confirmed</h2>
+              <p class="confirmation-subheading" data-i18n="confirmationSubtitle">Your report has been received by city authorities.</p>
+            </div>
+            <button type="button" id="btn-read-aloud-conf" class="speaker-btn" aria-label="Read confirmation aloud" title="Listen">
+              <svg class="speaker-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Duplicate Merged Notice Banner (Shown when duplicate is merged) -->
+          <div id="conf-duplicate-badge" class="conf-duplicate-banner hidden">
+            <div class="conf-dup-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div>
+              <strong id="conf-duplicate-count-text" class="conf-duplicate-count-text">3 people reported this</strong>
+              <p class="conf-duplicate-subtext" data-i18n="trackMergedNotice">Similar complaint detected nearby. Merged to raise resolution priority.</p>
+            </div>
+          </div>
+
+          <!-- 4 Required Fields: Ticket number, Issue type, Department, Urgency (colour + icon) -->
+          <div class="conf-fields-list">
+            <!-- 1. Ticket Number -->
+            <div class="conf-field-row">
+              <span class="conf-field-label" data-i18n="confTicketNumber">Ticket Number</span>
+              <span id="conf-ticket-num" class="conf-ticket-num-val font-mono">CL-2026-0000</span>
+            </div>
+
+            <!-- 2. Issue Type -->
+            <div class="conf-field-row">
+              <span class="conf-field-label" data-i18n="confIssueType">Issue Type</span>
+              <span id="conf-issue-type" class="conf-field-val">-</span>
+            </div>
+
+            <!-- 3. Receiving Department -->
+            <div class="conf-field-row">
+              <span class="conf-field-label" data-i18n="confDepartment">Received By</span>
+              <span id="conf-department" class="conf-field-val conf-dept-badge">-</span>
+            </div>
+
+            <!-- 4. Urgency (Colour + Icon) -->
+            <div class="conf-field-row">
+              <span class="conf-field-label" data-i18n="confUrgency">Urgency</span>
+              <div id="conf-urgency-badge" class="urgency-badge-with-icon">
+                <span id="conf-urgency-icon-wrap" class="urgency-icon-wrap"></span>
+                <span id="conf-urgency-text" class="urgency-label-text">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critical Safety Warning Card (shown only for Critical tickets) -->
+        <div id="critical-safety-card" class="critical-safety-card hidden">
+          <div class="safety-card-header">
+            <svg class="safety-warning-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <h3 class="safety-heading" data-i18n="criticalWarningHeading">Safety Warning</h3>
+          </div>
+          <p id="safety-warning-text" class="safety-text" data-i18n="criticalWarningText">
+            This issue poses an immediate hazard. Please keep away from the area. For life-threatening emergencies, call 112 immediately.
+          </p>
+          <a href="tel:112" class="btn-emergency-call" aria-label="Call emergency 112">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <span data-i18n="emergencyCallBtn">Call Emergency: 112</span>
+          </a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="confirmation-actions-stack">
+          <button type="button" id="btn-track-this-ticket" class="btn-main-accent" data-i18n="trackThisTicketBtn">
+            Track This Complaint
+          </button>
+          <button type="button" id="btn-restart" class="action-btn" style="justify-content: center;" data-i18n="newComplaintBtn">
+            Submit Another Issue
+          </button>
+          <button type="button" id="btn-view-all-tickets" class="action-btn" style="justify-content: center;">
+            <span data-i18n="viewTicketsBtn">View Saved Tickets</span>
+          </button>
+          <button type="button" id="btn-officer-nav-success" class="action-btn" style="justify-content: center;">
+            Officer Dashboard
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: MY TICKETS (SAVED TICKETS) ================= -->
+    <section id="view-tickets" class="app-view" aria-label="Saved Tickets">
+      <header class="view-header">
+        <div>
+          <h2 class="brand-title-compact">CivicLens</h2>
+          <p class="brand-tagline-compact" data-i18n="tagline">powered by Awaaz</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btn-track-nav-tickets" class="btn-subtle-nav">
+            <span data-i18n="trackNavBtn">Track</span>
+          </button>
+          <button type="button" id="btn-officer-nav-tickets" class="btn-subtle-nav" aria-label="Officer Dashboard">
+            Officer
+          </button>
+          <button type="button" id="btn-back-to-report" class="btn-lang-pill" aria-label="Back">
+            <span data-i18n="backBtn">Back</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="screen-title-row">
+        <h3 class="screen-title" data-i18n="myTicketsBtn">My Tickets</h3>
+      </div>
+
+      <!-- Tickets List Container -->
+      <div id="tickets-list-container" class="tickets-list-container">
+        <!-- Dynamically rendered ticket cards from Firestore / local storage -->
+      </div>
+    </section>
+
+    <!-- ================= VIEW 5: TRACK MY COMPLAINT ================= -->
+    <section id="view-track" class="app-view" aria-label="Track My Complaint">
+      <header class="view-header">
+        <div>
+          <h2 class="brand-title-compact">CivicLens</h2>
+          <p class="brand-tagline-compact" data-i18n="tagline">powered by Awaaz</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btn-back-from-track" class="btn-lang-pill" aria-label="Back">
+            <span data-i18n="backBtn">Back</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Track Search & Header -->
+      <div class="track-search-section">
+        <div class="screen-title-row" style="margin-bottom: 4px;">
+          <h3 class="screen-title" data-i18n="trackScreenTitle">Track my complaint</h3>
+          <button type="button" class="speaker-btn" id="btn-speak-track-screen" aria-label="Read status aloud" title="Listen">
+            <svg class="speaker-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          </button>
+        </div>
+        <p class="track-subtitle" data-i18n="trackSubtitle">Enter your ticket number to view live resolution progress.</p>
+
+        <form id="track-form" class="track-input-form" onsubmit="return false;">
+          <input type="text" id="track-ticket-input" class="track-text-input font-mono" placeholder="e.g. CL-2026-1042" data-i18n-placeholder="trackInputPlaceholder" autocomplete="off" autocapitalize="characters">
+          <button type="submit" id="btn-submit-track" class="btn-main-accent track-submit-btn">
+            <span class="btn-spinner hidden" id="track-spinner" aria-hidden="true"></span>
+            <span id="track-btn-label" data-i18n="trackSubmitBtn">Track</span>
+          </button>
+        </form>
+        <div id="track-error-msg" class="track-error-notice hidden" role="alert">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span id="track-error-text" data-i18n="trackNotFoundMsg">No ticket found with this number. Please check and try again.</span>
+            <button type="button" id="btn-speak-track-error" class="speaker-btn speaker-btn-sm" aria-label="Listen to error message" title="Listen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Initial Empty State (Before searching) -->
+      <div id="track-initial-state" class="empty-state-card" style="margin-top: 10px;">
+        <div class="empty-state-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <h4 class="empty-state-title" data-i18n="trackScreenTitle">Track my complaint</h4>
+        <p class="empty-state-text" data-i18n="trackSubtitle">Enter your ticket number to view live resolution progress.</p>
+      </div>
+
+      <!-- Live Stepper & Ticket Details -->
+      <div id="track-result-wrap" class="track-result-container hidden">
+
+        <!-- Duplicate Merged Notice Banner -->
+        <div id="track-duplicate-alert" class="track-duplicate-banner hidden">
+          <div class="track-dup-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <div id="track-people-reported-text" class="track-dup-count-text">3 people reported this</div>
+            <p class="track-dup-subtext" data-i18n="trackMergedNotice">Similar complaint detected nearby. Merged to raise resolution priority.</p>
+          </div>
+        </div>
+
+        <!-- 4 Steps Stepper in Citizen's Language -->
+        <div class="stepper-card">
+          <div class="stepper-line-bg"></div>
+          <div id="stepper-line-progress" class="stepper-line-progress"></div>
+
+          <!-- Step 1: Received -->
+          <div class="stepper-step" id="step-node-received">
+            <div class="step-indicator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div class="step-content">
+              <div class="step-header">
+                <h4 class="step-title" data-i18n="stepReceived">Received</h4>
+                <span class="step-pill" id="step-pill-received">Done</span>
+              </div>
+              <p class="step-desc" data-i18n="stepReceivedDesc">Complaint recorded in municipal system</p>
+            </div>
+          </div>
+
+          <!-- Step 2: Assigned -->
+          <div class="stepper-step" id="step-node-assigned">
+            <div class="step-indicator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <polyline points="17 11 19 13 23 9"></polyline>
+              </svg>
+            </div>
+            <div class="step-content">
+              <div class="step-header">
+                <h4 class="step-title" data-i18n="stepAssigned">Assigned</h4>
+                <span class="step-pill" id="step-pill-assigned">Pending</span>
+              </div>
+              <p class="step-desc" data-i18n="stepAssignedDesc">Routed to department officer</p>
+            </div>
+          </div>
+
+          <!-- Step 3: In progress -->
+          <div class="stepper-step" id="step-node-inprogress">
+            <div class="step-indicator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="step-content">
+              <div class="step-header">
+                <h4 class="step-title" data-i18n="stepInProgress">In progress</h4>
+                <span class="step-pill" id="step-pill-inprogress">Pending</span>
+              </div>
+              <p class="step-desc" data-i18n="stepInProgressDesc">Field crew actively resolving issue</p>
+            </div>
+          </div>
+
+          <!-- Step 4: Fixed -->
+          <div class="stepper-step" id="step-node-fixed">
+            <div class="step-indicator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <div class="step-content">
+              <div class="step-header">
+                <h4 class="step-title" data-i18n="stepFixed">Fixed</h4>
+                <span class="step-pill" id="step-pill-fixed">Pending</span>
+              </div>
+              <p class="step-desc" data-i18n="stepFixedDesc">Problem resolved and verified</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Summary Card -->
+        <div class="track-summary-card">
+          <div class="conf-field-row">
+            <span class="conf-field-label" data-i18n="confTicketNumber">Ticket Number</span>
+            <span id="track-ticket-num" class="conf-ticket-num-val font-mono">CL-2026-0000</span>
+          </div>
+          <div class="conf-field-row">
+            <span class="conf-field-label" data-i18n="confIssueType">Issue Type</span>
+            <span id="track-issue-type" class="conf-field-val">-</span>
+          </div>
+          <div class="conf-field-row">
+            <span class="conf-field-label" data-i18n="confDepartment">Received By</span>
+            <span id="track-department" class="conf-field-val conf-dept-badge">-</span>
+          </div>
+          <div class="conf-field-row">
+            <span class="conf-field-label" data-i18n="confUrgency">Urgency</span>
+            <div id="track-urgency-badge" class="urgency-badge-with-icon">
+              <span id="track-urgency-icon-wrap" class="urgency-icon-wrap"></span>
+              <span id="track-urgency-text" class="urgency-label-text">-</span>
+            </div>
+          </div>
+          <div class="conf-field-row">
+            <span class="conf-field-label" data-i18n="fieldLocation">Location</span>
+            <span id="track-location" class="conf-field-val">-</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 6: OFFICER DASHBOARD (ENGLISH) ================= -->
+    <section id="view-officer" class="app-view" aria-label="Officer Dashboard">
+      <header class="view-header">
+        <div>
+          <h2 class="brand-title-compact">CivicLens</h2>
+          <p class="brand-tagline-compact">powered by Awaaz</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btn-back-to-citizen" class="btn-lang-pill" aria-label="Return to Citizen View">
+            Citizen View
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Title Row -->
+      <div class="officer-title-row">
+        <div>
+          <h3 class="screen-title" style="margin-bottom: 2px;">Officer Dashboard</h3>
+          <p class="officer-subtitle">Priority-sorted triage and municipal ticket resolution</p>
+        </div>
+        <button type="button" id="btn-officer-refresh" class="btn-subtle-nav" title="Refresh Tickets">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <!-- Thin Line of Counts by Severity -->
+      <div class="officer-severity-line" id="officer-severity-counts-line" aria-label="Severity Counts Summary">
+        <span class="count-chip crit">
+          <span class="dot">●</span> Critical: <strong id="officer-count-crit">0</strong>
+        </span>
+        <span class="count-divider">|</span>
+        <span class="count-chip high">
+          <span class="dot">●</span> High: <strong id="officer-count-high">0</strong>
+        </span>
+        <span class="count-divider">|</span>
+        <span class="count-chip med">
+          <span class="dot">●</span> Medium: <strong id="officer-count-med">0</strong>
+        </span>
+        <span class="count-divider">|</span>
+        <span class="count-chip low">
+          <span class="dot">●</span> Low: <strong id="officer-count-low">0</strong>
+        </span>
+        <span class="count-divider">|</span>
+        <span class="count-chip total">
+          Total: <strong id="officer-count-total">0</strong>
+        </span>
+      </div>
+
+      <!-- Filter Controls: Department & Severity -->
+      <div class="officer-filters-bar">
+        <div class="filter-group">
+          <label for="officer-filter-dept" class="filter-label">Department</label>
+          <select id="officer-filter-dept" class="officer-select-input">
+            <option value="ALL">All Departments</option>
+            <option value="Roads & Buildings">Roads & Buildings</option>
+            <option value="Sanitation">Sanitation</option>
+            <option value="Water Board">Water Board</option>
+            <option value="Electricity Department">Electricity Department</option>
+            <option value="Parks & Gardens">Parks & Gardens</option>
+            <option value="Drainage Department">Drainage Department</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="officer-filter-sev" class="filter-label">Severity</label>
+          <select id="officer-filter-sev" class="officer-select-input">
+            <option value="ALL">All Severities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tickets List (Priority Sorted: Critical > High > Medium > Low, then Newest First) -->
+      <div id="officer-tickets-container" class="officer-tickets-list" aria-label="Officer Tickets List">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script src="translations.js"></script>
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

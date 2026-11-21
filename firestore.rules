@@ -1,0 +1,214 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: tickets
+    // Document ID: {ticketId} (e.g. 'CL-2026-1042')
+    //
+    // Fields:
+    //   - id: string (required, 3-64 chars, matches ticketId in path, immutable) - Unique ticket tracking identifier
+    //   - original_text: string (required, 1-5000 chars, immutable) - Original complaint text submitted by citizen
+    //   - language: string (required, 2-50 chars, immutable) - Detected or selected language name (e.g. 'Hindi', 'Telugu', 'English')
+    //   - language_code: string (optional, 2-10 chars, immutable) - ISO language code (e.g. 'en', 'hi', 'te')
+    //   - english_translation: string (required, 1-5000 chars, immutable) - Translated complaint text for municipal routing
+    //   - category: string (required, enum: 'roads'|'waste'|'water'|'electricity'|'trees'|'drainage', immutable) - Issue category
+    //   - severity: string (required, enum: 'Critical'|'High'|'Medium'|'Low', immutable) - Triage priority level
+    //   - severity_reason: string (required, 1-1000 chars, immutable) - Justification for assigned priority
+    //   - department: string (required, enum: 'Roads & Buildings'|'Sanitation'|'Water Board'|'Electricity Department'|'Parks & Gardens'|'Drainage Department', immutable) - Assigned municipal department
+    //   - location: string (required, 1-500 chars, immutable) - Geo/street location description
+    //   - photo: string or null (optional, data URL / image URL <= 1,000,000 chars, immutable) - Complaint photo evidence
+    //   - duplicate_count: number (required, integer >= 0 and <= 100000, immutable) - Count of duplicate or nearby complaints
+    //   - status: string (required, enum: 'Received'|'Assigned'|'In progress'|'Fixed'|'Submitted', initial: 'Received'|'Submitted') - Municipal ticket lifecycle status
+    //   - time: string (required, ISO 8601 string, immutable) - Timestamp when ticket was created
+    //   - unclear_notes: string or null (optional, <= 2000 chars, immutable) - Triage notes if complaint text was vague
+    //   - timestamp: number (optional, epoch ms, immutable) - Client epoch timestamp
+    //   - server_timestamp: timestamp (optional, server timestamp, immutable) - Firestore server timestamp
+    //   - updated_time: string (optional, ISO 8601 string, mutable) - Timestamp when status was updated by officer
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidIsoDate(dateStr) {
+      return dateStr is string &&
+             dateStr.size() >= 19 &&
+             dateStr.size() <= 35 &&
+             dateStr.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*');
+    }
+
+    function isValidCategory(cat) {
+      return cat in ['roads', 'waste', 'water', 'electricity', 'trees', 'drainage'];
+    }
+
+    function isValidSeverity(sev) {
+      return sev in ['Critical', 'High', 'Medium', 'Low'];
+    }
+
+    function isValidDepartment(dept) {
+      return dept in [
+        'Roads & Buildings',
+        'Sanitation',
+        'Water Board',
+        'Electricity Department',
+        'Parks & Gardens',
+        'Drainage Department'
+      ];
+    }
+
+    function isValidStatus(status) {
+      return status in ['Received', 'Assigned', 'In progress', 'Fixed', 'Submitted'];
+    }
+
+    function isValidInitialStatus(status) {
+      return status in ['Received', 'Submitted'];
+    }
+
+    // ===============================================================
+    // Domain Validator Functions (Enforced on BOTH Create & Update)
+    // ===============================================================
+
+    // Validates the complete ticket document schema, types, bounds, and permitted fields
+    function isValidTicket(data) {
+      let allowedFields = [
+        'id',
+        'original_text',
+        'language',
+        'language_code',
+        'english_translation',
+        'category',
+        'severity',
+        'severity_reason',
+        'department',
+        'location',
+        'photo',
+        'duplicate_count',
+        'status',
+        'time',
+        'unclear_notes',
+        'timestamp',
+        'server_timestamp',
+        'updated_time'
+      ];
+
+      let requiredFields = [
+        'id',
+        'original_text',
+        'language',
+        'english_translation',
+        'category',
+        'severity',
+        'severity_reason',
+        'department',
+        'location',
+        'duplicate_count',
+        'status',
+        'time'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.id is string && data.id.size() >= 3 && data.id.size() <= 64 &&
+             data.original_text is string && data.original_text.size() >= 1 && data.original_text.size() <= 5000 &&
+             data.language is string && data.language.size() >= 2 && data.language.size() <= 50 &&
+             (!('language_code' in data) || (data.language_code is string && data.language_code.size() >= 2 && data.language_code.size() <= 10)) &&
+             data.english_translation is string && data.english_translation.size() >= 1 && data.english_translation.size() <= 5000 &&
+             data.category is string && isValidCategory(data.category) &&
+             data.severity is string && isValidSeverity(data.severity) &&
+             data.severity_reason is string && data.severity_reason.size() >= 1 && data.severity_reason.size() <= 1000 &&
+             data.department is string && isValidDepartment(data.department) &&
+             data.location is string && data.location.size() >= 1 && data.location.size() <= 500 &&
+             (!('photo' in data) || data.photo == null || (data.photo is string && data.photo.size() <= 1000000)) &&
+             data.duplicate_count is number && data.duplicate_count >= 0 && data.duplicate_count <= 100000 &&
+             data.status is string && isValidStatus(data.status) &&
+             isValidIsoDate(data.time) &&
+             (!('unclear_notes' in data) || data.unclear_notes == null || (data.unclear_notes is string && data.unclear_notes.size() <= 2000)) &&
+             (!('timestamp' in data) || (data.timestamp is number && data.timestamp > 0)) &&
+             (!('server_timestamp' in data) || data.server_timestamp is timestamp) &&
+             (!('updated_time' in data) || data.updated_time == null || isValidIsoDate(data.updated_time));
+    }
+
+    // Additional validations specific to ticket creation
+    function isValidTicketCreate(ticketId) {
+      let data = request.resource.data;
+      return data.id == ticketId &&
+             isValidInitialStatus(data.status);
+    }
+
+    // Additional validations specific to ticket status update by municipal officers
+    function isValidTicketUpdate(ticketId) {
+      let data = request.resource.data;
+      let immutableFields = [
+        'id',
+        'original_text',
+        'language',
+        'english_translation',
+        'category',
+        'severity',
+        'severity_reason',
+        'department',
+        'location',
+        'time'
+      ];
+
+      return data.id == ticketId &&
+             data.id == resource.data.id &&
+             areImmutableFieldsUnchanged(immutableFields) &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_time']) &&
+             (!('photo' in resource.data) || data.photo == resource.data.photo) &&
+             (!('language_code' in resource.data) || data.language_code == resource.data.language_code) &&
+             (!('unclear_notes' in resource.data) || data.unclear_notes == resource.data.unclear_notes) &&
+             (!('timestamp' in resource.data) || data.timestamp == resource.data.timestamp) &&
+             (!('server_timestamp' in resource.data) || data.server_timestamp == resource.data.server_timestamp) &&
+             data.duplicate_count == resource.data.duplicate_count;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Default Deny: Deny all reads and writes across the entire database by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Tickets Collection: Municipal civic complaints and officer triage
+    match /tickets/{ticketId} {
+      // Public read access for citizens tracking their complaints and officers using the officer dashboard
+      allow read: if true;
+
+      // Public create access for citizens submitting complaint tickets
+      allow create: if isValidTicket(request.resource.data) &&
+                       isValidTicketCreate(ticketId);
+
+      // Controlled update access for updating ticket status and updated timestamp
+      allow update: if isValidTicket(request.resource.data) &&
+                       isValidTicketUpdate(ticketId);
+
+      // Deletion denied to preserve civic complaint audit records
+      allow delete: if false;
+    }
+  }
+}
